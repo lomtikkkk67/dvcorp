@@ -10,7 +10,19 @@ from telegram.ext import (
 
 # === НАСТРОЙКИ ИЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ===
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+ADMIN_ID_STR = os.getenv("ADMIN_ID")
+
+# Проверка, что переменные окружения заданы
+if not BOT_TOKEN:
+    raise ValueError("Переменная окружения BOT_TOKEN не задана!")
+if not ADMIN_ID_STR:
+    raise ValueError("Переменная окружения ADMIN_ID не задана!")
+
+try:
+    ADMIN_ID = int(ADMIN_ID_STR)
+except ValueError:
+    raise ValueError(f"ADMIN_ID должен быть числом, а не '{ADMIN_ID_STR}'")
+
 
 # === ССЫЛКИ ===
 CHANNEL_DV = "https://t.me/dvcorpdev"
@@ -22,7 +34,11 @@ MODPACK_URL = "https://t.me/CherryJuice/1649"
 WAIT_NICK, WAIT_TG, WAIT_AGREE = range(3)
 SUPPORT_MSG = 4
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # === ФАЙЛЫ ===
 WHITELIST_FILE = "whitelist.json"
@@ -216,6 +232,7 @@ async def get_tg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return WAIT_AGREE
 
 async def agree_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("Кнопка 'Согласен' нажата!")
     query = update.callback_query
     await query.answer()
     nick = context.user_data.get("nick")
@@ -246,10 +263,14 @@ async def agree_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     whitelist.append(entry)
     save_json(WHITELIST_FILE, whitelist)
 
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"📝 **Новая заявка:**\n\nНик: `{nick}`\nTG: {tg}\nID: `{user_id}`"
-    )
+    try:
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=f"📝 **Новая заявка:**\n\nНик: `{nick}`\nTG: {tg}\nID: `{user_id}`"
+        )
+        logger.info(f"Уведомление о заявке отправлено админу {ADMIN_ID}")
+    except Exception as e:
+        logger.error(f"Не удалось отправить уведомление админу: {e}")
 
     await query.edit_message_media(
         media=InputMediaPhoto(
@@ -262,6 +283,7 @@ async def agree_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === ОТМЕНА ЧЕРЕЗ КНОПКУ ===
 async def cancel_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("Кнопка 'Отмена' нажата!")
     query = update.callback_query
     await query.answer()
     await query.edit_message_media(
@@ -363,10 +385,15 @@ async def support_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message.text
     user = update.message.from_user
 
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"🛠 **Поддержка:**\n\nОт: @{user.username}\n\n{msg}"
-    )
+    try:
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=f"🛠 **Поддержка:**\n\nОт: @{user.username}\n\n{msg}"
+        )
+        logger.info(f"Сообщение в поддержку отправлено админу {ADMIN_ID}")
+    except Exception as e:
+        logger.error(f"Не удалось отправить сообщение в поддержку админу: {e}")
+
     await update.message.reply_text("✅ Отправлено!")
 
     await context.bot.send_photo(
@@ -401,7 +428,6 @@ def main():
     app.add_handler(CommandHandler("list", list_whitelist))
     app.add_handler(CommandHandler("blacklist", blacklist_cmd))
     app.add_handler(CommandHandler("check", check_cmd))
-    app.add_handler(CallbackQueryHandler(cancel_button, pattern="^cancel$"))
     app.add_handler(CallbackQueryHandler(button_handler, pattern="^(how_to_join|join_pc|join_phone|join_ios|join_android|back)$"))
 
     app.add_handler(ConversationHandler(
@@ -411,7 +437,10 @@ def main():
             WAIT_TG: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_tg)],
             WAIT_AGREE: [CallbackQueryHandler(agree_rules, pattern="^agree_rules$")],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            CallbackQueryHandler(cancel_button, pattern="^cancel$")
+        ],
         allow_reentry=True,
     ))
 
@@ -420,7 +449,10 @@ def main():
         states={
             SUPPORT_MSG: [MessageHandler(filters.TEXT & ~filters.COMMAND, support_message)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            CallbackQueryHandler(cancel_button, pattern="^cancel$")
+        ],
         allow_reentry=True,
     ))
 
