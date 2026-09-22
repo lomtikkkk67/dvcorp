@@ -1,7 +1,6 @@
 import os
 import logging
 import json
-import asyncio
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import (
@@ -232,7 +231,6 @@ async def agree_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Вы уже подавали заявку.\n\n"
             "По всем вопросам пишите в поддержку."
         )
-        await asyncio.sleep(2)
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
             photo=open("images/start.png", "rb"),
@@ -262,7 +260,6 @@ async def agree_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Попробуй зайти, тебя кикнет, потом добавим."
     )
 
-    await asyncio.sleep(2)
     await context.bot.send_photo(
         chat_id=update.effective_chat.id,
         photo=open("images/start.png", "rb"),
@@ -380,7 +377,6 @@ async def support_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text("✅ Отправлено!")
 
-    await asyncio.sleep(2)
     await context.bot.send_photo(
         chat_id=update.effective_chat.id,
         photo=open("images/start.png", "rb"),
