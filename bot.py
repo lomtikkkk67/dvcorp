@@ -9,7 +9,7 @@ from telegram.ext import (
     MessageHandler, filters, ContextTypes, ConversationHandler
 )
 
-# === НАСТРОЙКИ (ВРЕМЕННО ДЛЯ ТЕСТА) ===
+# === НАСТРОЙКИ ИЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ===
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
