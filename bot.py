@@ -227,14 +227,11 @@ async def agree_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     repeat = any(entry["user_id"] == user_id for entry in whitelist)
 
     if repeat:
-        await query.edit_message_text(
-            "❌ Вы уже подавали заявку.\n\n"
-            "По всем вопросам пишите в поддержку."
-        )
-        await context.bot.send_photo(
-            chat_id=update.effective_chat.id,
-            photo=open("images/start.png", "rb"),
-            caption=MAIN_MENU_TEXT,
+        await query.edit_message_media(
+            media=InputMediaPhoto(
+                media=open("images/start.png", "rb"),
+                caption="❌ Вы уже подавали заявку.\n\nПо всем вопросам пишите в поддержку."
+            ),
             reply_markup=get_main_menu()
         )
         return ConversationHandler.END
@@ -254,16 +251,11 @@ async def agree_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text=f"📝 **Новая заявка:**\n\nНик: `{nick}`\nTG: {tg}\nID: `{user_id}`"
     )
 
-    await query.edit_message_text(
-        "✅ Заявка отправлена!\n\n"
-        "⚠️ Добавление занимает до **2 дней**.\n\n"
-        "Попробуй зайти, тебя кикнет, потом добавим."
-    )
-
-    await context.bot.send_photo(
-        chat_id=update.effective_chat.id,
-        photo=open("images/start.png", "rb"),
-        caption=MAIN_MENU_TEXT,
+    await query.edit_message_media(
+        media=InputMediaPhoto(
+            media=open("images/start.png", "rb"),
+            caption="✅ Заявка отправлена!\n\n⚠️ Добавление занимает до **2 дней**.\n\nПопробуй зайти, тебя кикнет, потом добавим."
+        ),
         reply_markup=get_main_menu()
     )
     return ConversationHandler.END
@@ -420,6 +412,7 @@ def main():
             WAIT_AGREE: [CallbackQueryHandler(agree_rules, pattern="^agree_rules$")],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True,
     ))
 
     app.add_handler(ConversationHandler(
@@ -428,6 +421,7 @@ def main():
             SUPPORT_MSG: [MessageHandler(filters.TEXT & ~filters.COMMAND, support_message)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True,
     ))
 
     app.run_polling()
