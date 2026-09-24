@@ -295,23 +295,24 @@ async def cancel_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# === УСТАНОВКА СКИНА (БЕЗ КАРТИНКИ) ===
+# === УСТАНОВКА СКИНА ===
 async def skin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
     text = (
         "🎨 **Установка скина**\n\n"
-        "1. Нажми кнопку ниже и загрузи свою картинку скина.\n"
-        "2. Сайт выдаст команду. **Тебе нужна только ссылка в кавычках** (часть `https://...`).\n"
+        "1. Нажми одну из кнопок ниже и загрузи свою картинку скина.\n"
+        "2. Сайт выдаст команду или ссылку. **Тебе нужна только ссылка на файл .png** (часть `https://...`).\n"
         "3. **Вставь полученный URL сюда, в этот чат.**\n\n"
-        "⚠️ Ссылка должна быть прямой (на файл .png), а не на страницу сайта."
+        "⚠️ Ссылка должна быть **прямой** (на файл .png), а не на страницу сайта.\n\n"
+        "💡 Если один сайт не работает — попробуй другой."
     )
     keyboard = [
-        [InlineKeyboardButton("🌐 Загрузить скин", url="https://skinsrestorer.net/upload")],
+        [InlineKeyboardButton("🌐 Загрузить на SkinRestorer", url="https://skinsrestorer.net/upload")],
+        [InlineKeyboardButton("🌐 Загрузить на Postimages", url="https://postimages.org")],
         [InlineKeyboardButton("⬅️ Отмена", callback_data="cancel")],
     ]
-    # Отправляем НОВОЕ сообщение, а не редактируем старое фото-сообщение
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=text,
@@ -323,7 +324,7 @@ async def skin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_skin_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
     
-    if not (url.startswith("http") and (".png" in url.lower() or "imgur" in url.lower() or "discordapp" in url.lower() or "skinsrestorer" in url.lower())):
+    if not (url.startswith("http") and (".png" in url.lower() or "imgur" in url.lower() or "discordapp" in url.lower() or "skinsrestorer" in url.lower() or "postimg" in url.lower())):
         await update.message.reply_text(
             "❌ Это не похоже на прямую ссылку на картинку.\n"
             "Убедись, что ссылка ведёт на файл .png."
