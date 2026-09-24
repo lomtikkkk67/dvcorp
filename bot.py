@@ -295,7 +295,7 @@ async def cancel_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# === УСТАНОВКА СКИНА ===
+# === УСТАНОВКА СКИНА (БЕЗ КАРТИНКИ) ===
 async def skin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -311,13 +311,10 @@ async def skin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🌐 Загрузить скин", url="https://skinsrestorer.net/upload")],
         [InlineKeyboardButton("⬅️ Отмена", callback_data="cancel")],
     ]
-    await query.edit_message_media(
-        media=InputMediaPhoto(
-            media=open("images/skinposter.png", "rb"),
-            caption=text,
-            parse_mode="Markdown"
-        ),
-        reply_markup=InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
     )
     return WAIT_SKIN_URL
 
@@ -338,9 +335,8 @@ async def get_skin_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🤸 Slim (Алекс)", callback_data="skin_slim")],
         [InlineKeyboardButton("⬅️ Отмена", callback_data="cancel")],
     ]
-    await update.message.reply_photo(
-        photo=open("images/skinposter.png", "rb"),
-        caption="Выбери модель рук для скина:",
+    await update.message.reply_text(
+        "Выбери модель рук для скина:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
     return WAIT_SKIN_VARIANT
@@ -357,16 +353,11 @@ async def skin_variant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     variant = "classic" if query.data == "skin_classic" else "slim"
     command = f'/skin set web {variant} "{url}"'
     
-    await query.edit_message_media(
-        media=InputMediaPhoto(
-            media=open("images/skinposter.png", "rb"),
-            caption=(
-                f"✅ **Твоя команда:**\n\n"
-                f"`{command}`\n\n"
-                f"Скопируй её (нажми на текст) и вставь в чат Minecraft."
-            ),
-            parse_mode="Markdown"
-        ),
+    await query.edit_message_text(
+        f"✅ **Твоя команда:**\n\n"
+        f"`{command}`\n\n"
+        f"Скопируй её (нажми на текст) и вставь в чат Minecraft.",
+        parse_mode="Markdown",
         reply_markup=get_main_menu()
     )
     return ConversationHandler.END
