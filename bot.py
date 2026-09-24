@@ -12,7 +12,6 @@ from telegram.ext import (
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID_STR = os.getenv("ADMIN_ID")
 
-# Проверка, что переменные окружения заданы
 if not BOT_TOKEN:
     raise ValueError("Переменная окружения BOT_TOKEN не задана!")
 if not ADMIN_ID_STR:
@@ -23,7 +22,6 @@ try:
 except ValueError:
     raise ValueError(f"ADMIN_ID должен быть числом, а не '{ADMIN_ID_STR}'")
 
-
 # === ССЫЛКИ ===
 CHANNEL_DV = "https://t.me/dvcorpdev"
 CHANNEL_VISHNEVY = "https://t.me/CherryJuice"
@@ -33,6 +31,7 @@ MODPACK_URL = "https://t.me/CherryJuice/1649"
 # === СОСТОЯНИЯ ===
 WAIT_NICK, WAIT_TG, WAIT_AGREE = range(3)
 SUPPORT_MSG = 4
+WAIT_SKIN_URL, WAIT_SKIN_VARIANT = range(5, 7)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -60,9 +59,10 @@ def get_main_menu():
     keyboard = [
         [InlineKeyboardButton("🚀 Как попасть на сервер?", callback_data="how_to_join")],
         [InlineKeyboardButton("📜 Правила сервера", url=RULES_URL)],
-        [InlineKeyboardButton("📢 Телеграм-канал сервера", url=CHANNEL_DV)],
-        [InlineKeyboardButton("📢 Телеграм-канал Дмитрия Вишневого", url=CHANNEL_VISHNEVY)],
         [InlineKeyboardButton("📝 Попасть в белый список", callback_data="whitelist")],
+        [InlineKeyboardButton("🎨 Установить скин", callback_data="skin")],
+        [InlineKeyboardButton("📢 Телеграм-канал Дмитрия Вишневого", url=CHANNEL_VISHNEVY)],
+        [InlineKeyboardButton("📢 Телеграм-канал сервера", url=CHANNEL_DV)],
         [InlineKeyboardButton("🛠 Поддержка", callback_data="support")],
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -295,6 +295,82 @@ async def cancel_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
+# === УСТАНОВКА СКИНА ===
+async def skin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    text = (
+        "🎨 **Установка скина**\n\n"
+        "1. Нажми кнопку ниже и загрузи свою картинку скина.\n"
+        "2. Сайт выдаст команду. **Тебе нужна только ссылка в кавычках** (часть `https://...`).\n"
+        "3. **Вставь полученный URL сюда, в этот чат.**\n\n"
+        "⚠️ Ссылка должна быть прямой (на файл .png), а не на страницу сайта."
+    )
+    keyboard = [
+        [InlineKeyboardButton("🌐 Загрузить скин", url="https://skinsrestorer.net/upload")],
+        [InlineKeyboardButton("⬅️ Отмена", callback_data="cancel")],
+    ]
+    await query.edit_message_media(
+        media=InputMediaPhoto(
+            media=open("images/skinposter.png", "rb"),
+            caption=text,
+            parse_mode="Markdown"
+        ),
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return WAIT_SKIN_URL
+
+async def get_skin_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    url = update.message.text.strip()
+    
+    if not (url.startswith("http") and (".png" in url.lower() or "imgur" in url.lower() or "discordapp" in url.lower() or "skinsrestorer" in url.lower())):
+        await update.message.reply_text(
+            "❌ Это не похоже на прямую ссылку на картинку.\n"
+            "Убедись, что ссылка ведёт на файл .png."
+        )
+        return WAIT_SKIN_URL
+    
+    context.user_data["skin_url"] = url
+    
+    keyboard = [
+        [InlineKeyboardButton("💪 Classic (Стив)", callback_data="skin_classic")],
+        [InlineKeyboardButton("🤸 Slim (Алекс)", callback_data="skin_slim")],
+        [InlineKeyboardButton("⬅️ Отмена", callback_data="cancel")],
+    ]
+    await update.message.reply_photo(
+        photo=open("images/skinposter.png", "rb"),
+        caption="Выбери модель рук для скина:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return WAIT_SKIN_VARIANT
+
+async def skin_variant(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    url = context.user_data.get("skin_url")
+    if not url:
+        await query.edit_message_text("❌ Ошибка: ссылка не найдена. Начни заново.")
+        return ConversationHandler.END
+    
+    variant = "classic" if query.data == "skin_classic" else "slim"
+    command = f'/skin set web {variant} "{url}"'
+    
+    await query.edit_message_media(
+        media=InputMediaPhoto(
+            media=open("images/skinposter.png", "rb"),
+            caption=(
+                f"✅ **Твоя команда:**\n\n"
+                f"`{command}`\n\n"
+                f"Скопируй её (нажми на текст) и вставь в чат Minecraft."
+            ),
+            parse_mode="Markdown"
+        ),
+        reply_markup=get_main_menu()
+    )
+    return ConversationHandler.END
+
 # === ЧЁРНЫЙ СПИСОК ===
 async def blacklist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -436,6 +512,19 @@ def main():
             WAIT_NICK: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_nick)],
             WAIT_TG: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_tg)],
             WAIT_AGREE: [CallbackQueryHandler(agree_rules, pattern="^agree_rules$")],
+        },
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            CallbackQueryHandler(cancel_button, pattern="^cancel$")
+        ],
+        allow_reentry=True,
+    ))
+
+    app.add_handler(ConversationHandler(
+        entry_points=[CallbackQueryHandler(skin_start, pattern="^skin$")],
+        states={
+            WAIT_SKIN_URL: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_skin_url)],
+            WAIT_SKIN_VARIANT: [CallbackQueryHandler(skin_variant, pattern="^skin_(classic|slim)$")],
         },
         fallbacks=[
             CommandHandler("cancel", cancel),
