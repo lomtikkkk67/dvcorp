@@ -97,8 +97,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "how_to_join":
         keyboard = [
-            [InlineKeyboardButton("💻 ПК (Java)", callback_data="join_pc")],
-            [InlineKeyboardButton("📱 Телефон", callback_data="join_phone")],
+            [InlineKeyboardButton("💻 ПК (JAVA)", callback_data="join_pc")],
+            [InlineKeyboardButton("📱 Телефон (BEDROCK)", callback_data="join_phone")],
             [InlineKeyboardButton("⬅️ Назад", callback_data="back")],
         ]
         await query.edit_message_media(
