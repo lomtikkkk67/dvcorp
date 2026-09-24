@@ -311,8 +311,10 @@ async def skin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🌐 Загрузить скин", url="https://skinsrestorer.net/upload")],
         [InlineKeyboardButton("⬅️ Отмена", callback_data="cancel")],
     ]
-    await query.edit_message_text(
-        text,
+    # Отправляем НОВОЕ сообщение, а не редактируем старое фото-сообщение
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
